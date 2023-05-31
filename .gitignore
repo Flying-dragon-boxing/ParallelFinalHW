@@ -33,3 +33,9 @@
 
 # Specific files
 input/*
+.vscode/*
+
+# CMake
+build/*
+
+*.Zone.Identifier

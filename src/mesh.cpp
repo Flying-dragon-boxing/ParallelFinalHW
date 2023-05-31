@@ -23,7 +23,7 @@ mesh::mesh(int _x, int _y, int _z, double _lx, double _ly, double _lz)
     m = new double[nx * ny * nz];
 }
 
-void mesh::init(double x, double y, double z)
+void mesh::init(double x, double y, double z, dist &d)
 {
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < nx; i++)

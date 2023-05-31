@@ -7,30 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB SOURCES "src/*.cpp")
 add_executable(bin ${SOURCES})
-
-find_package(BLAS REQUIRED)
-if(BLAS_FOUND)
-    message("OpenBLAS found.")
-    include_directories(${INCLUDE_PATH}
-        include
-        ${BLAS_INCLUDE_DIRS})
-    # target_link_libraries(bin ${BLAS_LIBRARIES})
-endif(BLAS_FOUND)
-message(${BLAS_LIBRARIES})
-
-find_package(LAPACK REQUIRED)
-if(LAPACK_FOUND)
-    message("LAPACK found.")
-endif(LAPACK_FOUND)
-message(${LAPACK_LIBRARIES})
-
-option(${PROJECT_NAME}_MPI "use MPI" OFF)
- 
-if (DEFINED ${PROJECT_NAME}_MPI)
-    message(STATUS "Defined MPI")
-else()
-    message(STATUS "Not Defined MPI")
-endif()
  
 if (${PROJECT_NAME}_MPI)
     message(STATUS "Using MPI")
@@ -41,13 +17,25 @@ if (${PROJECT_NAME}_MPI)
     if(MPI_FOUND)
         message("MPI found.")
     endif(MPI_FOUND)
-    target_link_libraries(bin ${MPI_CXX_LIBRARIES})
 else()
     message(STATUS "Not Using MPI")
     add_definitions(-U__MPI)
 endif()
 
-target_link_libraries(bin cblas lapacke ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} gfortran)
+find_package(OpenMP REQUIRED)
+if(OpenMP_FOUND)
+    message("OpenMP found.")
+    include_directories(${INCLUDE_PATH}
+        include
+        ${OpenMP_CXX_INCLUDE_DIRS})
+    # target_link_libraries(bin ${BLAS_LIBRARIES})
+endif(OpenMP_FOUND)
+message(${OpenMP_CXX_LIBRARIES})
+
+set(CMAKE_CXX_COMPILER mpicxx)
+set(CMAKE_C_COMPILER mpicc)
+
+target_link_libraries(bin ${MPI_CXX_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${OpenMP_CXX_LIBRARIES} gfortran)
 
 add_subdirectory(src)
 # add_subdirectory(third_party)
