@@ -11,7 +11,7 @@
 #include <cstring>
 #include <fstream>
 
-kernel::kernel(const char *filename)
+venergy::venergy(const char *filename)
 {
     if (filename != nullptr)
     {
@@ -24,10 +24,25 @@ kernel::kernel(const char *filename)
             fin >> v[i];
         }
     }
+    else
+    {
+        nx = 0;
+        ny = 0;
+        nz = 0;
+        v = nullptr;
+    }
     
 }
 
-kernel &kernel::operator=(const kernel &k)
+venergy::venergy()
+{
+    nx = 0;
+    ny = 0;
+    nz = 0;
+    v = nullptr;
+}
+
+venergy &venergy::operator=(const venergy &k)
 {
     nx = k.nx;
     ny = k.ny;
@@ -37,104 +52,110 @@ kernel &kernel::operator=(const kernel &k)
     return *this;
 }
 
-kernel::~kernel()
+venergy::~venergy()
 {
     delete[] v;
 }
 
-double &kernel::operator()(int i, int j, int k)
+double &venergy::operator()(int i, int j, int k)
 {
     return v[i * ny * nz + j * nz + k];
 }
 
 #ifdef __MPI
-double *integral_matrix(int narray, mesh *m, kernel *k)
+double *integral_matrix(int narray, mesh *m, venergy &k)
 {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    int nx, ny, nz, n;
-    double lx, ly, lz, l;
-    if (rank == 0)
+
+    int n = m->nx * m->ny * m->nz;
+    double *result = new double[narray*narray];
+    memset(result, 0, narray * narray * sizeof(double));
+    // manage task
+    int *work = new int[narray*narray];
+    int cnt = 0;
+    for (int i = 0; i < narray; i++)
     {
-        nx = m->nx;
-        ny = m->ny;
-        nz = m->nz;
-        lx = m->lx;
-        ly = m->ly;
-        lz = m->lz;
-        l = lx*ly*lz;
-        n = nx * ny * nz;
-    }
-    MPI_Bcast(&nx, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&ny, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&nz, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&narray, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&l, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    
-    double *result = new double[narray * narray];
-    double *f1 = new double[n*narray];
-    double *v = new double[n];
-    if (rank == 0)
-    {
-        for (int i = 0; i < narray; i++)
+        for (int j = 0; j < narray; j++)
         {
-            memcpy(f1 + i * n, (m+i)->m, n * sizeof(double));
-        }
-        memcpy(v, k->v, n * sizeof(double));
-    }
-    
-    // allocate task
-    int *sendcounts = new int[size];
-    int *displs = new int[size];
-    int sum = 0;
-    for (int i = 0; i < size; i++)
-    {
-        sendcounts[i] = narray * narray / size;
-        if (i < narray * narray % size)
-        {
-            sendcounts[i]++;
+            if (i <= j)
+            {                
+                work[cnt++] = i * narray + j;
+            }
         }
         
-        displs[i] = sum;
-        sum += sendcounts[i];
     }
-
-    timer::tick("","pre_integral"+std::to_string(rank));
-    MPI_Bcast(v, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(f1, n * narray, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    timer::tick("","pre_integral"+std::to_string(rank));
-    // calculate
     
-    // #pragma omp parallel for thread_num(4)
-    for (int i = displs[rank]; i < (displs[rank] + sendcounts[rank]); i++)
-    {
-        int i1 = i / narray;
-        int i2 = i % narray;
-        if (i1 > i2)
-        {
-            continue;
-        }    
-        // #pragma omp atomic
-        timer::tick("","integral"+std::to_string(rank));
-        double resi = 0;
-#ifdef __OMP
-        #pragma omp parallel for reduction(+:resi) thread_num(4)
-#endif
-        for (int j = 0; j < n; j++)
-        {
 
-            resi += (f1 + i1 * n)[j] * (f1 + i2 * n)[j] * v[j];       
-            
+    int nwork = cnt;
+    int *nwork_per_process = new int[size];
+    int *displs_work = new int[size];
+    for (int i = 0; i < size; i++)
+    {
+        nwork_per_process[i] = nwork / size;
+        if (i < nwork % size)
+        {
+            nwork_per_process[i]++;
         }
-        result[i] = resi;
-        timer::tick("","integral"+std::to_string(rank));
+        displs_work[i] = i == 0 ? 0 : displs_work[i - 1] + nwork_per_process[i - 1];
     }
-    // gatherv
-    MPI_Gatherv(result + displs[rank], sendcounts[rank], MPI_DOUBLE, result, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    delete[] f1;
-    delete[] v;
+    
+    int *gather_size = new int[size];
+    int *displs_gather = new int[size];
+    for (int i = 0; i < size; i++)
+    {
+        displs_gather[i] = i == 0 ? 0 : displs_gather[i - 1] + gather_size[i - 1];
+        gather_size[i] = i == 0 ? work[nwork_per_process[i] - 1] +1: work[displs_work[i] + nwork_per_process[i] - 1] + 1 - displs_gather[i];
+        
+    }
+    
+    // calculate
+    for (int i = 0; i < nwork_per_process[rank]; i++)
+    {
+        int index = work[displs_work[rank] + i];
+        int i1 = index / narray;
+        int i2 = index % narray;
+        double sum = 0;
+        #pragma omp parallel for reduction(+:sum) collapse(3)
+        for (int x = 0; x < m->nx; x++)
+        {
+            for (int y = 0; y < m->ny; y++)
+            {
+                for (int z = 0; z < m->nz; z++)
+                {
+                    sum += k(x, y, z) * m[i2](x, y, z) * m[i1](x, y, z);
+                }
+                
+            }
+        }
+        result[index] = sum * m->lx * m->ly * m->lz / (m->nx * m->ny * m->nz);
+    }
+    
+
+    // gather at 0
+    MPI_Gatherv(result + displs_gather[rank], gather_size[rank], MPI_DOUBLE, result, gather_size, displs_gather, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     return result;
 }
+
+void venergy::mpi_bcast(int root)
+{
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Bcast(&nx, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Bcast(&ny, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Bcast(&nz, 1, MPI_INT, root, MPI_COMM_WORLD);
+    if (rank != root)
+    {
+        if (v != nullptr)
+        {
+            delete[] v;
+        }
+        v = new double[nx * ny * nz];
+    }
+    
+    MPI_Bcast(v, nx * ny * nz, MPI_DOUBLE, root, MPI_COMM_WORLD);
+}
+
 #endif
