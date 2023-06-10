@@ -12,12 +12,11 @@ class kernel
     double *v;
     int nx, ny, nz;
     kernel(const char *filename);
+    kernel &operator=(const kernel &k);
+    ~kernel();
     double &operator()(int i, int j, int k);
 };
 
-double integral(int nx, int ny, int nz, double *f1, double *f2, double *v);
-
 double *integral_matrix(int narray, mesh *m, kernel *k);
-
 
 #endif

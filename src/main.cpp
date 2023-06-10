@@ -5,11 +5,14 @@
 #include <map>
 #include <mpi.h>
 #include <memory>
+#include <unistd.h>
 
 #include "kernel.h"
 #include "mesh.h"
+#include "timer.h"
 
 #define __MPI
+// #define __MPI_DEBUG
 
 int main(int argc, char *argv[])
 {
@@ -17,9 +20,13 @@ int main(int argc, char *argv[])
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+    
+    std::ios::sync_with_stdio(false);
+    if (rank == 0)
+        timer::tick("", "total");
 
     std::map<std::string, std::string> args;
-    std::string filename = "input.txt";
+    std::string filename = "../input/INPUT.txt";
 
     int n_points;
     mesh *pm = nullptr;
@@ -59,17 +66,17 @@ int main(int argc, char *argv[])
         {
             points_path = args["points_path"];
         }
-        if (args.find("v_path") != args.end())
+        if (args.find("venergy_path") != args.end())
         {
-            v_path = args["v_path"];
+            v_path = args["venergy_path"];
         }
         if (args.find("distribution_path") != args.end())
         {
             distribution_path = args["distribution_path"];
         }
 
-         dist d(distribution_path.c_str());
-        k = kernel(v_path.c_str());
+        dist d(("../input/"+distribution_path).c_str());
+        k = kernel(("../input/"+v_path).c_str());
         int nx, ny, nz;
         nx = k.nx;
         ny = k.ny;
@@ -77,24 +84,54 @@ int main(int argc, char *argv[])
         
         // read points
         std::ifstream fin_points(points_path.c_str());
-        fin_points >> n_points;
+        n_points = 0;
+        char buffer[504];
+        while (fin_points.getline(buffer, 500))
+        {
+            if (buffer[0] != ' ' && buffer[0] != '\n')
+            {
+                n_points ++;
+            }
+            
+        }
+        fin_points.clear();
+        fin_points.seekg(0, std::ios::beg);
+
         double *points = new double[n_points * 3];
         for (int i = 0; i < n_points; i++)
-        {
+        { 
+#ifdef __INPUT_CURLY
+            buffer[0] = fin_points.get();
+            fin_points >> points[i * 3] >> buffer >> points[i * 3 + 1] >> buffer >> points[i * 3 + 2] >> buffer;
+#else
             fin_points >> points[i * 3] >> points[i * 3 + 1] >> points[i * 3 + 2];
+#endif
+            fin_points.getline(buffer, 500);
         }
 
-        std::allocator<mesh> alloc_mesh;
-        pm = alloc_mesh.allocate(n_points);
+        pm = new mesh[n_points];
         for (int i = 0; i < n_points; i++)
         {
-            alloc_mesh.construct(pm + i, nx, ny, nz, lx, ly, lz);
-            (pm+i)->init(points[i * 3], points[i * 3 + 1], points[i * 3 + 2], d);
+            pm[i] = mesh(nx, ny, nz, lx, ly, lz);
+            pm[i].init(points[i * 3], points[i * 3 + 1], points[i * 3 + 2], d);
         }
+        
     }
     
-    
+#ifdef __MPI_DEBUG
+    sleep(10);
+#endif
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::string func_name = "integral_matrix"+std::to_string(rank);
+    timer::tick("", func_name);
     double *return_matrix = integral_matrix(n_points, pm, &k);
+    timer::tick("", func_name);
+    timer::mpi_sync();
+    if (rank == 0)
+        timer::tick("", "total");
+    if (rank == 0)
+        timer::print();
+
     if (rank == 0)
     {
         std::ofstream fout("result.txt");
@@ -107,5 +144,6 @@ int main(int argc, char *argv[])
             fout << std::endl;
         }
     }
-    
+    delete[] return_matrix;
+    MPI_Finalize();
 }

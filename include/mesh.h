@@ -9,6 +9,8 @@ class dist
     double *m;
     int n;
     dist(const char *filename);
+    dist &operator=(const dist &d);
+    ~dist();
     double operator()(double x);
 };
 
@@ -20,6 +22,10 @@ class mesh
     double *m;
     double lx, ly, lz;
     mesh(int _x, int _y, int _z, double lx, double ly, double lz);
+    mesh();
+    ~mesh();
+    mesh(const mesh &m);
+    mesh &operator=(const mesh &m);
     void init(double x, double y, double z, dist &d);
     double &operator()(int i, int j, int k);
 };

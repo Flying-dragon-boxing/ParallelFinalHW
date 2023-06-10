@@ -39,3 +39,4 @@ input/*
 build/*
 
 *.Zone.Identifier
+input/EffiCase/.DS_Store

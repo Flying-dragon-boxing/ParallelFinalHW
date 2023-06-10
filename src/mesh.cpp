@@ -2,6 +2,10 @@
 #include <omp.h>
 #include <cmath>
 #include <fstream>
+#include <cstring>
+
+#define __OMP
+
 double spline(double x, double x0, double x1, double x2, double x3, double y0, double y1, double y2, double y3)
 {
     double a0, a1, a2, a3;
@@ -10,6 +14,22 @@ double spline(double x, double x0, double x1, double x2, double x3, double y0, d
     a2 = (y2 - 2 * y1 + y0) / ((x2 - x1) * (x2 - x0));
     a3 = (y3 - 3 * y2 + 3 * y1 - y0) / ((x3 - x2) * (x3 - x1) * (x3 - x0));
     return a0 + a1 * (x - x0) + a2 * (x - x0) * (x - x1) + a3 * (x - x0) * (x - x1) * (x - x2);
+}
+
+mesh::mesh()
+{
+    nx = 0;
+    ny = 0;
+    nz = 0;
+    lx = 0;
+    ly = 0;
+    lz = 0;
+    m = nullptr;
+}
+
+mesh::~mesh()
+{
+    delete[] m;
 }
 
 mesh::mesh(int _x, int _y, int _z, double _lx, double _ly, double _lz)
@@ -23,20 +43,51 @@ mesh::mesh(int _x, int _y, int _z, double _lx, double _ly, double _lz)
     m = new double[nx * ny * nz];
 }
 
+mesh::mesh(const mesh &me)
+{
+    nx = me.nx;
+    ny = me.ny;
+    nz = me.nz;
+    lx = me.lx;
+    ly = me.ly;
+    lz = me.lz;
+    m = new double[nx * ny * nz];
+    memcpy(m, me.m, nx * ny * nz * sizeof(double));
+    
+}
+
+mesh &mesh::operator=(const mesh &me)
+{
+    nx = me.nx;
+    ny = me.ny;
+    nz = me.nz;
+    lx = me.lx;
+    ly = me.ly;
+    lz = me.lz;
+    m = new double[nx * ny * nz];
+    memcpy(m, me.m, nx * ny * nz * sizeof(double));
+    return *this;
+}
+
 void mesh::init(double x, double y, double z, dist &d)
 {
+#ifdef __OMP
     #pragma omp parallel for collapse(2)
+#endif
     for (int i = 0; i < nx; i++)
     {
         for (int j = 0; j < ny; j++)
         {
             for (int k = 0; k < nz; k++)
             {
-                double n_x = (i + 0.5) * lx / nx;
-                double n_y = (j + 0.5) * ly / ny;
-                double n_z = (k + 0.5) * lz / nz;
+                double n_x = i * lx / nx;
+                double n_y = j * ly / ny;
+                double n_z = k * lz / nz;
                 double r = sqrt((n_x - x) * (n_x - x) + (n_y - y) * (n_y - y) + (n_z - z) * (n_z - z));
-                (*this)(i, j, k) = d(r);
+                // #pragma omp atomic
+                double dis = d(r);
+                (*this)(i, j, k) = dis;
+                
             }
             
         }
@@ -58,9 +109,24 @@ dist::dist(const char *filename)
     m = new double[n];
     for (int i = 0; i < n; i++)
     {
-        fin >> m[i];
+        fin >> m[i] >> buffer;
     }
     
+}
+
+dist &dist::operator=(const dist &d)
+{
+    dx = d.dx;
+    cutoff = d.cutoff;
+    n = d.n;
+    m = new double[n];
+    memcpy(m, d.m, n * sizeof(double));
+    return *this;
+}
+
+dist::~dist()
+{
+    delete[] m;
 }
 
 double dist::operator()(double x)
