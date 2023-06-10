@@ -12,7 +12,7 @@
 #include "timer.h"
 
 #define __MPI
-// #define __MPI_DEBUG
+#define __MPI_DEBUG
 
 int main(int argc, char *argv[])
 {
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     int n_points;
     mesh *pm = nullptr;
-    kernel k(nullptr);
+    venergy k(nullptr);
     if (rank == 0)
     {
         std::ifstream fin(filename);
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
         }
 
         dist d(("../input/"+distribution_path).c_str());
-        k = kernel(("../input/"+v_path).c_str());
+        k = venergy(("../input/"+v_path).c_str());
         int nx, ny, nz;
         nx = k.nx;
         ny = k.ny;
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
         }
         fin_points.clear();
         fin_points.seekg(0, std::ios::beg);
-
+        pm = new mesh[n_points];
         double *points = new double[n_points * 3];
         for (int i = 0; i < n_points; i++)
         { 
@@ -108,8 +108,6 @@ int main(int argc, char *argv[])
 #endif
             fin_points.getline(buffer, 500);
         }
-
-        pm = new mesh[n_points];
         for (int i = 0; i < n_points; i++)
         {
             pm[i] = mesh(nx, ny, nz, lx, ly, lz);
@@ -122,9 +120,24 @@ int main(int argc, char *argv[])
     sleep(10);
 #endif
     MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&n_points, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (rank != 0)
+    {
+        pm = new mesh[n_points];
+    }
+    
     std::string func_name = "integral_matrix"+std::to_string(rank);
+    for (int i = 0; i < n_points; i++)
+    {
+        pm[i].mpi_bcast();
+    }
+    k.mpi_bcast();
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << "rank " << rank << " start with venergy " << k.v[1] << std::endl;
     timer::tick("", func_name);
-    double *return_matrix = integral_matrix(n_points, pm, &k);
+    double *return_matrix = integral_matrix(n_points, pm, k);
+    // double *return_matrix = new double[n_points * n_points];
     timer::tick("", func_name);
     timer::mpi_sync();
     if (rank == 0)

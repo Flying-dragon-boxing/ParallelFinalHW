@@ -6,17 +6,19 @@
 #include <omp.h>
 #define __MPI
 
-class kernel
+class venergy
 {
     public:
     double *v;
     int nx, ny, nz;
-    kernel(const char *filename);
-    kernel &operator=(const kernel &k);
-    ~kernel();
+    venergy(const char *filename);
+    venergy();
+    venergy &operator=(const venergy &k);
+    ~venergy();
     double &operator()(int i, int j, int k);
+    void mpi_bcast(int root = 0);
 };
 
-double *integral_matrix(int narray, mesh *m, kernel *k);
+double *integral_matrix(int narray, mesh *m, venergy &k);
 
 #endif
