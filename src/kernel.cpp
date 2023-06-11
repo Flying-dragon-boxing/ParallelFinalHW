@@ -34,6 +34,29 @@ venergy::venergy(const char *filename)
     
 }
 
+void venergy::init(const char *filename)
+{
+    if (filename != nullptr)
+    {
+        std::ifstream fin(filename);
+        char buffer[100];
+        fin >> buffer >> nx >> buffer >> ny >> buffer >> nz >> buffer;
+        v = new double[nx * ny * nz];
+        for (int i = 0; i < nx * ny * nz; i++)
+        {
+            fin >> v[i];
+        }
+    }
+    else
+    {
+        nx = 0;
+        ny = 0;
+        nz = 0;
+        v = nullptr;
+    }
+    
+}
+
 venergy::venergy()
 {
     nx = 0;

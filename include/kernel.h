@@ -12,6 +12,7 @@ class venergy
     double *v;
     int nx, ny, nz;
     venergy(const char *filename);
+    void init(const char *filename);
     venergy();
     venergy &operator=(const venergy &k);
     ~venergy();

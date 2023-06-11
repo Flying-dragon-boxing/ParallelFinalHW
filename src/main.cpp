@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     int n_points, nx, ny, nz;
     mesh *pm = nullptr;
-    venergy k(nullptr);
+    venergy *k = new venergy(nullptr);
     if (rank == 0)
     {
         std::ifstream fin(filename);
@@ -76,11 +76,11 @@ int main(int argc, char *argv[])
         }
 
         dist d(("../input/"+distribution_path).c_str());
-        k = venergy(("../input/"+v_path).c_str());
+        k->init(("../input/"+v_path).c_str());
         
-        nx = k.nx;
-        ny = k.ny;
-        nz = k.nz;
+        nx = k->nx;
+        ny = k->ny;
+        nz = k->nz;
         
         // read points
         std::ifstream fin_points(points_path.c_str());
@@ -138,6 +138,10 @@ int main(int argc, char *argv[])
         max_size /= 2;
         use_cache = true;
     }
+    if (max_size <= 2)
+    {
+        omp_set_num_threads(size / 2 + 1);
+    }
     
     int color = (rank < max_size) ? 0 : MPI_UNDEFINED;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &Brave_New_World);
@@ -149,12 +153,12 @@ int main(int argc, char *argv[])
         {
             pm[i].mpi_bcast(Brave_New_World);
         }
-        k.mpi_bcast(Brave_New_World);
+        k->mpi_bcast(Brave_New_World);
         
         MPI_Barrier(Brave_New_World);
-        std::cout << "rank " << rank << " start with venergy " << k.v[1] << std::endl;
+        std::cout << "rank " << rank << " start with venergy " << k->v[1] << std::endl;
         timer::tick("", func_name);
-        return_matrix = integral_matrix(n_points, pm, k, Brave_New_World, use_cache);
+        return_matrix = integral_matrix(n_points, pm, *k, Brave_New_World, use_cache);
         // double *return_matrix = new double[n_points * n_points];
         timer::tick("", func_name);
         timer::mpi_sync();
@@ -178,5 +182,6 @@ int main(int argc, char *argv[])
         }
     }
     delete[] return_matrix;
+    delete k;
     MPI_Finalize();
 }
