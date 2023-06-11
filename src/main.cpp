@@ -12,7 +12,7 @@
 #include "timer.h"
 
 #define __MPI
-#define __MPI_DEBUG
+// #define __MPI_DEBUG
 
 int main(int argc, char *argv[])
 {
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     std::map<std::string, std::string> args;
     std::string filename = "../input/INPUT.txt";
 
-    int n_points;
+    int n_points, nx, ny, nz;
     mesh *pm = nullptr;
     venergy k(nullptr);
     if (rank == 0)
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
         dist d(("../input/"+distribution_path).c_str());
         k = venergy(("../input/"+v_path).c_str());
-        int nx, ny, nz;
+        
         nx = k.nx;
         ny = k.ny;
         nz = k.nz;
@@ -121,25 +121,38 @@ int main(int argc, char *argv[])
 #endif
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&n_points, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&nx, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&ny, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&nz, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (rank != 0)
     {
         pm = new mesh[n_points];
     }
     
-    std::string func_name = "integral_matrix"+std::to_string(rank);
-    for (int i = 0; i < n_points; i++)
+    MPI_Comm Brave_New_World;
+    unsigned long long max_memory = (unsigned long long) 12 * 1024 * 1024 * 1024;
+    int max_size = max_memory / (sizeof(double) * nx * ny * nz);
+    int color = (rank < max_size) ? 0 : MPI_UNDEFINED;
+    MPI_Comm_split(MPI_COMM_WORLD, color, rank, &Brave_New_World);
+    double *return_matrix = nullptr;
+    if (rank < max_size)
     {
-        pm[i].mpi_bcast();
+        std::string func_name = "integral_matrix"+std::to_string(rank);
+        for (int i = 0; i < n_points; i++)
+        {
+            pm[i].mpi_bcast(Brave_New_World);
+        }
+        k.mpi_bcast(Brave_New_World);
+        
+        MPI_Barrier(Brave_New_World);
+        std::cout << "rank " << rank << " start with venergy " << k.v[1] << std::endl;
+        timer::tick("", func_name);
+        return_matrix = integral_matrix(n_points, pm, k, Brave_New_World);
+        // double *return_matrix = new double[n_points * n_points];
+        timer::tick("", func_name);
+        timer::mpi_sync();
     }
-    k.mpi_bcast();
     
-    MPI_Barrier(MPI_COMM_WORLD);
-    std::cout << "rank " << rank << " start with venergy " << k.v[1] << std::endl;
-    timer::tick("", func_name);
-    double *return_matrix = integral_matrix(n_points, pm, k);
-    // double *return_matrix = new double[n_points * n_points];
-    timer::tick("", func_name);
-    timer::mpi_sync();
     if (rank == 0)
         timer::tick("", "total");
     if (rank == 0)

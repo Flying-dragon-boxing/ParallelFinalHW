@@ -1,5 +1,8 @@
 #ifndef MESH_H
 #define MESH_H
+
+#include <mpi.h>
+
 double spline(double x, double x0, double x1, double x2, double x3, double y0, double y1, double y2, double y3);
 
 class dist
@@ -13,7 +16,7 @@ class dist
     dist &operator=(const dist &d);
     ~dist();
     double operator()(double x);
-    void mpi_bcast(int root = 0);
+    void mpi_bcast(MPI_Comm comm, int root = 0);
 };
 
 class mesh
@@ -29,8 +32,8 @@ class mesh
     mesh(const mesh &m);
     mesh &operator=(const mesh &m);
     void init(double x, double y, double z, dist &d);
-    double operator()(int i, int j, int k);
-    void mpi_bcast(int root = 0);
+    double operator()(unsigned long long i, int j, int k);
+    void mpi_bcast(MPI_Comm comm, int root = 0);
 };
 
 #endif
