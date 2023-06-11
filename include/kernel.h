@@ -19,6 +19,6 @@ class venergy
     void mpi_bcast(MPI_Comm comm, int root = 0);
 };
 
-double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm);
+double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use_cache = false);
 
 #endif

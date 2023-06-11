@@ -63,7 +63,7 @@ double &venergy::operator()(unsigned long long i, int j, int k)
 }
 
 #ifdef __MPI
-double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm)
+double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use_cache)
 {
     int rank, size;
     MPI_Comm_rank(comm, &rank);
@@ -110,6 +110,8 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm)
         
     }
     
+    double *cache = nullptr;
+    int cache_pos = -1;
     // calculate
     for (int i = 0; i < nwork_per_process[rank]; i++)
     {
@@ -117,22 +119,71 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm)
         int i1 = index / narray;
         int i2 = index % narray;
         double sum = 0;
-        #pragma omp parallel for reduction(+:sum) collapse(3)
-        for (int x = 0; x < m->nx; x++)
+        if (use_cache)
         {
-            for (int y = 0; y < m->ny; y++)
+            if (cache_pos == i1)
             {
-                for (int z = 0; z < m->nz; z++)
+                #pragma omp parallel for reduction(+:sum) collapse(3)
+                for (int x = 0; x < m->nx; x++)
                 {
-                    sum += k(x, y, z) * m[i2](x, y, z) * m[i1](x, y, z);
+                    for (int y = 0; y < m->ny; y++)
+                    {
+                        for (int z = 0; z < m->nz; z++)
+                        {
+                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * m->ny * m->nz + y * m->nz + z];
+                        }
+                        
+                    }
                 }
-                
+                result[index] = sum * m->lx * m->ly * m->lz / n;
             }
+            else
+            {
+                if (cache != nullptr)
+                {
+                    delete[] cache;
+                }
+                cache_pos = i1;
+                cache = new double[n];
+                #pragma omp parallel for reduction(+:sum) collapse(3)
+                for (int x = 0; x < m->nx; x++)
+                {
+                    for (int y = 0; y < m->ny; y++)
+                    {
+                        for (int z = 0; z < m->nz; z++)
+                        {
+                            cache[x * m->ny * m->nz + y * m->nz + z] = m[i1](x, y, z);
+                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * m->ny * m->nz + y * m->nz + z];
+                        }
+                        
+                    }
+                }
+                result[index] = sum * m->lx * m->ly * m->lz / n;
+            }
+            
+            
+            
         }
-        result[index] = sum * m->lx * m->ly * m->lz / (m->nx * m->ny * m->nz);
+        else
+        {
+            #pragma omp parallel for reduction(+:sum) collapse(3)
+            for (int x = 0; x < m->nx; x++)
+            {
+                for (int y = 0; y < m->ny; y++)
+                {
+                    for (int z = 0; z < m->nz; z++)
+                    {
+                        sum += k(x, y, z) * m[i2](x, y, z) * m[i1](x, y, z);
+                    }
+                    
+                }
+            }
+            result[index] = sum * m->lx * m->ly * m->lz / n;
+        }
+        
     }
     
-
+    delete[] cache;
     // gather at 0
     MPI_Gatherv(result + displs_gather[rank], gather_size[rank], MPI_DOUBLE, result, gather_size, displs_gather, MPI_DOUBLE, 0, comm);
     return result;

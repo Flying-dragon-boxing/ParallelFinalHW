@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    
+    omp_set_num_threads(4);
     std::ios::sync_with_stdio(false);
     if (rank == 0)
         timer::tick("", "total");
@@ -129,9 +129,16 @@ int main(int argc, char *argv[])
         pm = new mesh[n_points];
     }
     
+    bool use_cache = false;
     MPI_Comm Brave_New_World;
-    unsigned long long max_memory = (unsigned long long) 12 * 1024 * 1024 * 1024;
+    unsigned long long max_memory = (unsigned long long) 8 * 1024 * 1024 * 1024;
     int max_size = max_memory / (sizeof(double) * nx * ny * nz);
+    if (max_size > 4)
+    {
+        max_size /= 2;
+        use_cache = true;
+    }
+    
     int color = (rank < max_size) ? 0 : MPI_UNDEFINED;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &Brave_New_World);
     double *return_matrix = nullptr;
@@ -147,7 +154,7 @@ int main(int argc, char *argv[])
         MPI_Barrier(Brave_New_World);
         std::cout << "rank " << rank << " start with venergy " << k.v[1] << std::endl;
         timer::tick("", func_name);
-        return_matrix = integral_matrix(n_points, pm, k, Brave_New_World);
+        return_matrix = integral_matrix(n_points, pm, k, Brave_New_World, use_cache);
         // double *return_matrix = new double[n_points * n_points];
         timer::tick("", func_name);
         timer::mpi_sync();

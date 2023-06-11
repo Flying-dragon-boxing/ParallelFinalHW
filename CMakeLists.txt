@@ -36,6 +36,8 @@ set(CMAKE_CXX_COMPILER mpicxx)
 set(CMAKE_C_COMPILER mpicc)
 
 target_link_libraries(bin ${MPI_CXX_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${OpenMP_CXX_LIBRARIES} gfortran)
+set(CMAKE_CXX_FLAGS ${OpenMP_CXX_FLAGS})
+message(${OpenMP_CXX_FLAGS})
 
 add_subdirectory(src)
 # add_subdirectory(third_party)
