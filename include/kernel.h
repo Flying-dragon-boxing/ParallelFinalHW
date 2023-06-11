@@ -15,10 +15,10 @@ class venergy
     venergy();
     venergy &operator=(const venergy &k);
     ~venergy();
-    double &operator()(int i, int j, int k);
-    void mpi_bcast(int root = 0);
+    double &operator()(unsigned long long i, int j, int k);
+    void mpi_bcast(MPI_Comm comm, int root = 0);
 };
 
-double *integral_matrix(int narray, mesh *m, venergy &k);
+double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm);
 
 #endif

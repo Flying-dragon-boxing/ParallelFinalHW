@@ -57,17 +57,17 @@ venergy::~venergy()
     delete[] v;
 }
 
-double &venergy::operator()(int i, int j, int k)
+double &venergy::operator()(unsigned long long i, int j, int k)
 {
     return v[i * ny * nz + j * nz + k];
 }
 
 #ifdef __MPI
-double *integral_matrix(int narray, mesh *m, venergy &k)
+double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm)
 {
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
 
     int n = m->nx * m->ny * m->nz;
     double *result = new double[narray*narray];
@@ -134,18 +134,18 @@ double *integral_matrix(int narray, mesh *m, venergy &k)
     
 
     // gather at 0
-    MPI_Gatherv(result + displs_gather[rank], gather_size[rank], MPI_DOUBLE, result, gather_size, displs_gather, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(result + displs_gather[rank], gather_size[rank], MPI_DOUBLE, result, gather_size, displs_gather, MPI_DOUBLE, 0, comm);
     return result;
 }
 
-void venergy::mpi_bcast(int root)
+void venergy::mpi_bcast(MPI_Comm comm, int root)
 {
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Bcast(&nx, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&ny, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nz, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
+    MPI_Bcast(&nx, 1, MPI_INT, root, comm);
+    MPI_Bcast(&ny, 1, MPI_INT, root, comm);
+    MPI_Bcast(&nz, 1, MPI_INT, root, comm);
     if (rank != root)
     {
         if (v != nullptr)
@@ -155,7 +155,7 @@ void venergy::mpi_bcast(int root)
         v = new double[nx * ny * nz];
     }
     
-    MPI_Bcast(v, nx * ny * nz, MPI_DOUBLE, root, MPI_COMM_WORLD);
+    MPI_Bcast(v, nx * ny * nz, MPI_DOUBLE, root, comm);
 }
 
 #endif

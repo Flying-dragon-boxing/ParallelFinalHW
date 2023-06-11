@@ -70,14 +70,14 @@ double dist::operator()(double x)
     return spline(x, (i - 3) * dx, (i - 2) * dx, (i - 1) * dx, i * dx, m[i - 3], m[i - 2], m[i - 1], m[i]);
 }
 
-void dist::mpi_bcast(int root)
+void dist::mpi_bcast(MPI_Comm comm, int root)
 {
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Bcast(&dx, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&cutoff, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&n, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
+    MPI_Bcast(&dx, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&cutoff, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&n, 1, MPI_INT, root, comm);
     if (m == nullptr)
         m = new double[n];
     else if (root != rank)
@@ -86,7 +86,7 @@ void dist::mpi_bcast(int root)
         m = new double[n];
     }
     
-    MPI_Bcast(m, n, MPI_DOUBLE, root, MPI_COMM_WORLD);
+    MPI_Bcast(m, n, MPI_DOUBLE, root, comm);
 }
 
 mesh::mesh(int _x, int _y, int _z, double _lx, double _ly, double _lz)
@@ -153,28 +153,28 @@ void mesh::init(double _x, double _y, double _z, dist &_d)
     d = _d;
 }
 
-double mesh::operator()(int i, int j, int k)
+double mesh::operator()(unsigned long long i, int j, int k)
 {
     return d(std::sqrt((lx*i/nx - x) * (lx*i/nx - x) + (ly*j/ny - y) * (ly*j/ny - y) + (lz*k/nz - z) * (lz*k/nz - z)));
 }
 
-void mesh::mpi_bcast(int root)
+void mesh::mpi_bcast(MPI_Comm comm, int root)
 {
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Bcast(&nx, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&ny, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&nz, 1, MPI_INT, root, MPI_COMM_WORLD);
-    MPI_Bcast(&lx, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&ly, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&lz, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&x, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&y, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&z, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&d.dx, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&d.cutoff, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Bcast(&d.n, 1, MPI_INT, root, MPI_COMM_WORLD);
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
+    MPI_Bcast(&nx, 1, MPI_INT, root, comm);
+    MPI_Bcast(&ny, 1, MPI_INT, root, comm);
+    MPI_Bcast(&nz, 1, MPI_INT, root, comm);
+    MPI_Bcast(&lx, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&ly, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&lz, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&x, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&y, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&z, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&d.dx, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&d.cutoff, 1, MPI_DOUBLE, root, comm);
+    MPI_Bcast(&d.n, 1, MPI_INT, root, comm);
     if (nx * ny * nz > 0)
     {
         if (root != rank)
@@ -187,6 +187,6 @@ void mesh::mpi_bcast(int root)
             d.m = new double[d.n];
         }
         
-        MPI_Bcast(d.m, d.n, MPI_DOUBLE, root, MPI_COMM_WORLD);
+        MPI_Bcast(d.m, d.n, MPI_DOUBLE, root, comm);
     }
 }
