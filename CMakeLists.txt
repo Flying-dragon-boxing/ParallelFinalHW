@@ -8,19 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 file(GLOB SOURCES "src/*.cpp")
 add_executable(bin ${SOURCES})
  
-if (${PROJECT_NAME}_MPI)
-    message(STATUS "Using MPI")
-    set(CMAKE_CXX_COMPILER mpicxx)
-    set(CMAKE_C_COMPILER mpicc)
-    add_definitions(-D__MPI)
-    find_package(MPI REQUIRED)
-    if(MPI_FOUND)
-        message("MPI found.")
-    endif(MPI_FOUND)
-else()
-    message(STATUS "Not Using MPI")
-    add_definitions(-U__MPI)
-endif()
+
+message(STATUS "Using MPI")
+set(CMAKE_CXX_COMPILER mpicxx)
+set(CMAKE_C_COMPILER mpicc)
+add_definitions(-D__MPI)
+find_package(MPI REQUIRED)
+if(MPI_FOUND)
+    message("MPI found.")
+endif(MPI_FOUND)
 
 find_package(OpenMP REQUIRED)
 if(OpenMP_FOUND)
@@ -31,6 +27,27 @@ if(OpenMP_FOUND)
     # target_link_libraries(bin ${BLAS_LIBRARIES})
 endif(OpenMP_FOUND)
 message(${OpenMP_CXX_LIBRARIES})
+
+find_package(BLAS REQUIRED)
+if(BLAS_FOUND)
+    message("Blas found.")
+    include_directories(${INCLUDE_PATH}
+        include
+        ${BLAS_INCLUDE_DIRS})
+endif(BLAS_FOUND)
+
+find_package(LAPACK REQUIRED)
+if(LAPACK_FOUND)
+    message("LAPACK found.")
+endif(LAPACK_FOUND)
+
+find_package(LAPACKE REQUIRED)
+if(LAPACKE_FOUND)
+    message("OpenMP found.")
+    include_directories(${INCLUDE_PATH}
+        include
+        ${LAPACKE_INCLUDE_DIRS})
+endif(LAPACKE_FOUND)
 
 set(CMAKE_CXX_COMPILER mpicxx)
 set(CMAKE_C_COMPILER mpicc)

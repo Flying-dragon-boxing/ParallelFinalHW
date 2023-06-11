@@ -75,8 +75,8 @@ int main(int argc, char *argv[])
             distribution_path = args["distribution_path"];
         }
 
-        dist d(("../input/"+distribution_path).c_str());
-        k->init(("../input/"+v_path).c_str());
+        dist d((distribution_path).c_str());
+        k->init((v_path).c_str());
         
         nx = k->nx;
         ny = k->ny;
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
     bool use_cache = false;
     MPI_Comm Brave_New_World;
     unsigned long long max_memory = (unsigned long long) 8 * 1024 * 1024 * 1024;
-    int max_size = max_memory / (sizeof(double) * nx * ny * nz);
+    int max_size = max_memory / sizeof(double) / nx / ny / nz;
     if (max_size > 4)
     {
         max_size /= 2;
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
         return_matrix = integral_matrix(n_points, pm, *k, Brave_New_World, use_cache);
         // double *return_matrix = new double[n_points * n_points];
         timer::tick("", func_name);
-        timer::mpi_sync();
+        timer::mpi_sync(Brave_New_World);
     }
     
     if (rank == 0)
@@ -181,7 +181,10 @@ int main(int argc, char *argv[])
             fout << std::endl;
         }
     }
-    delete[] return_matrix;
     delete k;
+
+    // diagonize use all cores
+
+
     MPI_Finalize();
 }
