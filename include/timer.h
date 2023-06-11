@@ -63,7 +63,7 @@ class timer
                      const std::string &func_name); // tick the timer of given class and func name
     static void print(); // print timer stats
 #ifdef __MPI
-    static void mpi_sync();
+    static void mpi_sync(MPI_Comm comm = MPI_COMM_WORLD); // sync timer stats
 #endif
 };
 

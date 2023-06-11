@@ -152,12 +152,12 @@ timer::timer_pack::timer_pack()
     calls = 0;
     dura = 0;
 }
-void timer::mpi_sync()
+void timer::mpi_sync(MPI_Comm comm)
 {
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(comm);
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
     int block_lengths[4] = {32, 32, 1, 1};
     MPI_Aint offsets[4] = {offsetof(timer::timer_pack, class_name), offsetof(timer::timer_pack, func_name), offsetof(timer::timer_pack, dura), offsetof(timer::timer_pack, calls)};
     MPI_Datatype types[4] = {MPI_CHAR, MPI_CHAR, MPI_DOUBLE, MPI_INT};
@@ -169,7 +169,7 @@ void timer::mpi_sync()
         if (rank == i)
         {
             int send_size = name_map.size(), recv_size;
-            MPI_Send(&send_size, 1, MPI_INT, 0, (i+1)*(0+1), MPI_COMM_WORLD);
+            MPI_Send(&send_size, 1, MPI_INT, 0, (i+1)*(0+1), comm);
             timer_pack *packs = new timer_pack[send_size];
             int cnt = 0;
             for (auto it = name_map.begin(); it != name_map.end(); it++)
@@ -178,19 +178,19 @@ void timer::mpi_sync()
                 cnt ++;
             }
             // std::cout << "packs sent from " << rank << " with size " << send_size << std::endl;
-            bool succ = MPI_Send(packs, send_size, mpi_timer_type, 0, 2*(i+1)*(0+1), MPI_COMM_WORLD);
+            bool succ = MPI_Send(packs, send_size, mpi_timer_type, 0, 2*(i+1)*(0+1), comm);
         }
         if (rank == 0)
         {
             int recv_size;
-            MPI_Recv(&recv_size, 1, MPI_INT, i, (i+1)*(0+1), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&recv_size, 1, MPI_INT, i, (i+1)*(0+1), comm, MPI_STATUS_IGNORE);
             timer_pack *packs;
 
             if (recv_size > 0)
             {
                 // std::cout << ' ' << recv_size << std::endl;
                 packs = new timer_pack[recv_size];
-                MPI_Recv(packs, recv_size, mpi_timer_type, i, 2*(i+1)*(0+1), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Recv(packs, recv_size, mpi_timer_type, i, 2*(i+1)*(0+1), comm, MPI_STATUS_IGNORE);
                 // std::cout << status.MPI_ERROR << std::endl;
                 
                 // std::cout << packs[0].class_name << packs[0].func_name << std::endl;
