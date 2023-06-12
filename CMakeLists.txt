@@ -45,7 +45,7 @@ endif(LAPACK_FOUND)
 
 find_package(LAPACKE REQUIRED)
 if(LAPACKE_FOUND)
-    message("OpenMP found.")
+    message("LAPACKE found.")
     include_directories(${INCLUDE_PATH}
         include
         ${LAPACKE_INCLUDE_DIRS})
