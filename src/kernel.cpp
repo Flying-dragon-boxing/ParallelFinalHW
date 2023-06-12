@@ -138,9 +138,9 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
     double *cache = nullptr;
     int cache_pos = -1;
     // calculate
-    double x_begin, x_end;
-    double y_begin, y_end;
-    double z_begin, z_end;
+    int x_begin, x_end;
+    int y_begin, y_end;
+    int z_begin, z_end;
     for (int i = 0; i < nwork_per_process[rank]; i++)
     {
         int index = work[displs_work[rank] + i];
@@ -172,32 +172,32 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
                 x_begin = 0;
                 if (m[i1].d.cutoff * nx / m->lx < m[i1].x)
                 {
-                    x_begin = m[i1].x - m[i1].d.cutoff * nx / m->lx;
+                    x_begin = (m[i1].x - m[i1].d.cutoff) * nx / m->lx;
                 }
                 x_end = nx;
-                if (x_end > m->x + m[i1].d.cutoff * nx / m->lx)
+                if (x_end > (m[i1].x + m[i1].d.cutoff) * nx / m->lx)
                 {
-                    x_end = m->x + m[i1].d.cutoff * nx / m->lx;
+                    x_end = (m[i1].x + m[i1].d.cutoff) * nx / m->lx;
                 }
                 y_begin = 0;
                 if (m[i1].d.cutoff * ny / m->ly < m[i1].y)
                 {
-                    y_begin = m[i1].y - m[i1].d.cutoff * ny / m->ly;
+                    y_begin = (m[i1].y - m[i1].d.cutoff) * ny / m->ly;
                 }
                 y_end = ny;
-                if (y_end > m->y + m[i1].d.cutoff * ny / m->ly)
+                if (y_end > (m[i1].y + m[i1].d.cutoff) * ny / m->ly)
                 {
-                    y_end = m->y + m[i1].d.cutoff * ny / m->ly;
+                    y_end = (m[i1].y + m[i1].d.cutoff) * ny / m->ly;
                 }
                 z_begin = 0;
                 if (m[i1].d.cutoff * nz / m->lz < m[i1].z)
                 {
-                    z_begin = m[i1].z - m[i1].d.cutoff * nz / m->lz;
+                    z_begin = (m[i1].z - m[i1].d.cutoff) * nz / m->lz;
                 }
                 z_end = nz;
-                if (z_end > m->z + m[i1].d.cutoff * nz / m->lz)
+                if (z_end > (m[i1].z + m[i1].d.cutoff) * nz / m->lz)
                 {
-                    z_end = m->z + m[i1].d.cutoff * nz / m->lz;
+                    z_end = (m[i1].z + m[i1].d.cutoff) * nz / m->lz;
                 }
                 
                 if (cache != nullptr)
@@ -232,32 +232,32 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
             int x_begin = 0;
             if (m[i1].d.cutoff * nx / m->lx < m[i1].x)
             {
-                x_begin = m[i1].x - m[i1].d.cutoff * nx / m->lx;
+                x_begin = (m[i1].x - m[i1].d.cutoff) * nx / m->lx;
             }
             int x_end = nx;
-            if (x_end > m->x + m[i1].d.cutoff * nx / m->lx)
+            if ((x_end > m[i1].x + m[i1].d.cutoff) * nx / m->lx)
             {
-                x_end = m->x + m[i1].d.cutoff * nx / m->lx;
+                (x_end = m[i1].x + m[i1].d.cutoff) * nx / m->lx;
             }
             int y_begin = 0;
             if (m[i1].d.cutoff * ny / m->ly < m[i1].y)
             {
-                y_begin = m[i1].y - m[i1].d.cutoff * ny / m->ly;
+                (y_begin = m[i1].y - m[i1].d.cutoff) * ny / m->ly;
             }
             int y_end = ny;
-            if (y_end > m->y + m[i1].d.cutoff * ny / m->ly)
+            if (y_end > (m[i1].y + m[i1].d.cutoff) * ny / m->ly)
             {
-                y_end = m->y + m[i1].d.cutoff * ny / m->ly;
+                y_end = (m[i1].y + m[i1].d.cutoff) * ny / m->ly;
             }
             int z_begin = 0;
             if (m[i1].d.cutoff * nz / m->lz < m[i1].z)
             {
-                z_begin = m[i1].z - m[i1].d.cutoff * nz / m->lz;
+                (z_begin = m[i1].z - m[i1].d.cutoff) * nz / m->lz;
             }
             int z_end = nz;
-            if (z_end > m->z + m[i1].d.cutoff * nz / m->lz)
+            if (z_end > (m[i1].z + m[i1].d.cutoff) * nz / m->lz)
             {
-                z_end = m->z + m[i1].d.cutoff * nz / m->lz;
+                z_end = (m[i1].z + m[i1].d.cutoff) * nz / m->lz;
             }
                 
 #ifdef __OMP

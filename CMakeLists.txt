@@ -14,7 +14,7 @@ message(STATUS "Using MPI")
 set(CMAKE_CXX_COMPILER mpicxx)
 set(CMAKE_C_COMPILER mpicc)
 add_definitions(-D__MPI)
-add_definitions(-D__OMP)
+# add_definitions(-D__OMP)
 find_package(MPI REQUIRED)
 if(MPI_FOUND)
     message("MPI found.")
@@ -45,7 +45,7 @@ endif(LAPACK_FOUND)
 
 find_package(LAPACKE REQUIRED)
 if(LAPACKE_FOUND)
-    message("OpenMP found.")
+    message("LAPACKE found.")
     include_directories(${INCLUDE_PATH}
         include
         ${LAPACKE_INCLUDE_DIRS})
