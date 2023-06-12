@@ -4,7 +4,6 @@
 #include <mesh.h>
 #include <mpi.h>
 #include <omp.h>
-#define __MPI
 
 class venergy
 {

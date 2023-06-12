@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 
-#define __MPI
 #ifndef __MPI
 #include <chrono>
 using namespace std::chrono;

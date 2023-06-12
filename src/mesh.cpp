@@ -1,11 +1,9 @@
 #include "mesh.h"
 #include <mpi.h>
-#include <omp.h>
 #include <cmath>
 #include <fstream>
 #include <cstring>
-
-#define __OMP
+#include <cassert>
 
 double spline(double x, double x0, double x1, double x2, double x3, double y0, double y1, double y2, double y3)
 {
@@ -20,6 +18,7 @@ double spline(double x, double x0, double x1, double x2, double x3, double y0, d
 dist::dist(const char *filename)
 {
     std::ifstream fin(filename);
+    assert(fin.is_open());
     char buffer[100];
     fin >> buffer >> cutoff >> buffer >> dx >> buffer >> n >> buffer >> buffer >> buffer;
     m = new double[n];

@@ -6,9 +6,8 @@
 #include <mpi.h>
 #endif
 
-#define __OMP
-
 #include <cstring>
+#include <cassert>
 #include <fstream>
 
 venergy::venergy(const char *filename)
@@ -16,6 +15,8 @@ venergy::venergy(const char *filename)
     if (filename != nullptr)
     {
         std::ifstream fin(filename);
+        assert(fin.is_open());
+        
         char buffer[100];
         fin >> buffer >> nx >> buffer >> ny >> buffer >> nz >> buffer;
         v = new double[nx * ny * nz];
@@ -39,6 +40,7 @@ void venergy::init(const char *filename)
     if (filename != nullptr)
     {
         std::ifstream fin(filename);
+        assert(fin.is_open());
         char buffer[100];
         fin >> buffer >> nx >> buffer >> ny >> buffer >> nz >> buffer;
         v = new double[nx * ny * nz];
@@ -91,7 +93,7 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
     int rank, size;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
-
+    int nx = m->nx, ny = m->ny, nz = m->nz;
     int n = m->nx * m->ny * m->nz;
     double *result = new double[narray*narray];
     memset(result, 0, narray * narray * sizeof(double));
@@ -146,14 +148,16 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
         {
             if (cache_pos == i1)
             {
+#ifdef __OMP
                 #pragma omp parallel for reduction(+:sum) collapse(3)
-                for (int x = 0; x < m->nx; x++)
+#endif
+                for (int x = 0; x < nx; x++)
                 {
-                    for (int y = 0; y < m->ny; y++)
+                    for (int z = 0; z < nz; z++)
                     {
-                        for (int z = 0; z < m->nz; z++)
+                        for (int y = 0; y < ny; y++)
                         {
-                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * m->ny * m->nz + y * m->nz + z];
+                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * ny * nz + y * nz + z];
                         }
                         
                     }
@@ -168,15 +172,17 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
                 }
                 cache_pos = i1;
                 cache = new double[n];
+#ifdef __OMP
                 #pragma omp parallel for reduction(+:sum) collapse(3)
-                for (int x = 0; x < m->nx; x++)
+#endif
+                for (int x = 0; x < nx; x++)
                 {
-                    for (int y = 0; y < m->ny; y++)
+                    for (int z = 0; z < nz; z++)
                     {
-                        for (int z = 0; z < m->nz; z++)
+                        for (int y = 0; y < ny; y++)
                         {
-                            cache[x * m->ny * m->nz + y * m->nz + z] = m[i1](x, y, z);
-                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * m->ny * m->nz + y * m->nz + z];
+                            cache[x * ny * nz + y * nz + z] = m[i1](x, y, z);
+                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * ny * nz + y * nz + z];
                         }
                         
                     }
@@ -189,12 +195,14 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
         }
         else
         {
+#ifdef __OMP
             #pragma omp parallel for reduction(+:sum) collapse(3)
-            for (int x = 0; x < m->nx; x++)
+#endif
+            for (int x = 0; x < nx; x++)
             {
-                for (int y = 0; y < m->ny; y++)
+                for (int z = 0; z < nz; z++)
                 {
-                    for (int z = 0; z < m->nz; z++)
+                    for (int y = 0; y < ny; y++)
                     {
                         sum += k(x, y, z) * m[i2](x, y, z) * m[i1](x, y, z);
                     }
@@ -208,7 +216,8 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
     
     delete[] cache;
     // gather at 0
-    MPI_Gatherv(result + displs_gather[rank], gather_size[rank], MPI_DOUBLE, result, gather_size, displs_gather, MPI_DOUBLE, 0, comm);
+    // MPI_Gatherv(result + displs_gather[rank], gather_size[rank], MPI_DOUBLE, result, gather_size, displs_gather, MPI_DOUBLE, 0, comm);
+    MPI_Allgatherv(result + displs_gather[rank], gather_size[rank], MPI_DOUBLE, result, gather_size, displs_gather, MPI_DOUBLE, comm);
     return result;
 }
 
