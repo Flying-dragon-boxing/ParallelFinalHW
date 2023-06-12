@@ -31,7 +31,14 @@ int main(int argc, char *argv[])
         timer::tick("", "total");
 
     std::map<std::string, std::string> args;
-    std::string filename = "../input/INPUT.txt";
+    char filename[500] = {0};
+    if (rank == 0)
+    {
+        std::cout << "Input filename: " << std::endl;
+        std::cin >> filename;
+    }
+    MPI_Bcast(filename, 500, MPI_CHAR, 0, MPI_COMM_WORLD);
+
     std::string diago_lib;
 
     int n_points, nx, ny, nz;
@@ -160,7 +167,7 @@ int main(int argc, char *argv[])
 #endif    
     int color = (rank < max_size) ? 0 : MPI_UNDEFINED;
     MPI_Comm_split(MPI_COMM_WORLD, color, rank, &Brave_New_World);
-    double *return_matrix = nullptr;
+    double *return_matrix = new double[n_points*n_points];
     if (rank < max_size)
     {
         std::string func_name = "integral_matrix"+std::to_string(rank);
@@ -203,32 +210,32 @@ int main(int argc, char *argv[])
     double *eigenvalue = nullptr;
     double *eigenvector = nullptr;
     // use lapacke at rank 0
-    // if (diago_lib == "lapack" && rank == 0)
-    // {
+    if (diago_lib == "lapack" && rank == 0)
+    {
 
-    //     eigenvalue = new double[n_points];
-    //     eigenvector = new double[n_points * n_points];
-    //     LAPACKE_dsyev(LAPACK_ROW_MAJOR, 'V', 'U', n_points, return_matrix, n_points, eigenvalue);
-    //     std::ofstream fout("eigenvalue.txt");
-    //     for (int i = 0; i < n_points; i++)
-    //     {
-    //         fout << eigenvalue[i] << std::endl;
-    //     }
-    //     fout.close();
-    //     fout.open("eigenvector.txt");
-    //     for (int i = 0; i < n_points; i++)
-    //     {
-    //         for (int j = 0; j < n_points; j++)
-    //         {
-    //             fout << return_matrix[i * n_points + j] << " ";
-    //         }
-    //         fout << std::endl;
-    //     }
+        eigenvalue = new double[n_points];
+        eigenvector = new double[n_points * n_points];
+        LAPACKE_dsyev(LAPACK_ROW_MAJOR, 'V', 'U', n_points, return_matrix, n_points, eigenvalue);
+        std::ofstream fout("eigenvalue.txt");
+        for (int i = 0; i < n_points; i++)
+        {
+            fout << eigenvalue[i] << std::endl;
+        }
+        fout.close();
+        fout.open("eigenvector.txt");
+        for (int i = 0; i < n_points; i++)
+        {
+            for (int j = 0; j < n_points; j++)
+            {
+                fout << return_matrix[i * n_points + j] << " ";
+            }
+            fout << std::endl;
+        }
 
     
-    // }
-    // // or use scalapack
-    // else if (diago_lib == "scalapack")
+    }
+    // or use scalapack
+    else if (diago_lib == "scalapack")
     {
         MPI_Bcast(return_matrix, n_points * n_points, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         double *eigenvalue = new double[n_points];
