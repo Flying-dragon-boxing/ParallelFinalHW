@@ -151,11 +151,11 @@ int main(int argc, char *argv[])
     MPI_Comm Brave_New_World;
     unsigned long long max_memory = (unsigned long long) 10 * 1024 * 1024 * 1024;
     int max_size = max_memory / sizeof(double) / nx / ny / nz;
-    if (max_size > 4)
-    {
-        max_size /= 2;
+    // if (max_size > 4)
+    // {
+    //     max_size /= 1.5;
         use_cache = true;
-    }
+    // }
 #ifdef __OMP
     omp_set_num_threads(2);
     if (size / max_size > 1)

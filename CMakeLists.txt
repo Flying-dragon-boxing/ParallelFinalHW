@@ -4,7 +4,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/obj)
 set(INCLUDE_PATH ${PROJECT_SOURCE_DIR}/include)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE "Debug")
+# set(CMAKE_BUILD_TYPE "Release")
 
 file(GLOB SOURCES "src/*.c" "src/*.cpp")
 add_executable(bin ${SOURCES})

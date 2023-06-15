@@ -90,6 +90,7 @@ double &venergy::operator()(unsigned long long i, int j, int k)
 #ifdef __MPI
 double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use_cache)
 {
+    // use_cache = false;
     int rank, size;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
@@ -151,6 +152,9 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
         {
             if (cache_pos == i1)
             {
+                int nx_cache = x_end - x_begin;
+                int ny_cache = y_end - y_begin;
+                int nz_cache = z_end - z_begin;
 #ifdef __OMP
                 #pragma omp parallel for reduction(+:sum) collapse(3)
 #endif           
@@ -160,7 +164,7 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
                     {
                         for (int y = y_begin; y < y_end; y++)
                         {
-                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * ny * nz + y * nz + z];
+                            sum += k(x, y, z) * m[i2](x, y, z) * cache[(x-x_begin) * ny_cache * nz_cache + (y-y_begin) * nz_cache + (z-z_begin)];
                         }
                         
                     }
@@ -199,13 +203,15 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
                 {
                     z_end = (m[i1].z + m[i1].d.cutoff) * nz / m->lz;
                 }
-                
+                int nx_cache = x_end - x_begin;
+                int ny_cache = y_end - y_begin;
+                int nz_cache = z_end - z_begin;
                 if (cache != nullptr)
                 {
                     delete[] cache;
                 }
                 cache_pos = i1;
-                cache = new double[n];
+                cache = new double[nx_cache * ny_cache * nz_cache];
 #ifdef __OMP
                 #pragma omp parallel for reduction(+:sum) collapse(3)
 #endif
@@ -215,8 +221,8 @@ double *integral_matrix(int narray, mesh *m, venergy &k, MPI_Comm comm, bool use
                     {
                         for (int y = y_begin; y < y_end; y++)
                         {
-                            cache[x * ny * nz + y * nz + z] = m[i1](x, y, z);
-                            sum += k(x, y, z) * m[i2](x, y, z) * cache[x * ny * nz + y * nz + z];
+                            cache[(x-x_begin) * ny_cache * nz_cache + (y-y_begin) * nz_cache + (z-z_begin)] = m[i1](x, y, z);
+                            sum += k(x, y, z) * m[i2](x, y, z) * cache[(x-x_begin) * ny_cache * nz_cache + (y-y_begin) * nz_cache + (z-z_begin)];
                         }
                         
                     }
