@@ -1,4 +1,4 @@
-#include <c_pdsyev.h>
+#include "c_pdsyev.h"
 void c_pdsyev(int n, double *input_mat, double *eigenvalues, double *eigenvectors)
 {
     // currently the matrix is read by all the MPI processes, this is inefficient
