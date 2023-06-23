@@ -24,7 +24,7 @@ make
 即编译成功。
 
 **重要：**
-**如果需要输入三维空间的点格式为(x, y, z)，则应在`CMakeLists.txt`中添加`add_definitions(-D__INPUT_CURLY)`**
+**如果需要输入三维空间的点格式为`(x, y, z)`（而非`x y z`），则应在`CMakeLists.txt`中添加`add_definitions(-D__INPUT_CURLY)`**
 
 当以最大进程数运行时，项目会自动分配OpenMP需要的线程数。
 
